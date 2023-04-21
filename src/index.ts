@@ -1,6 +1,7 @@
 import { ApolloServer } from "apollo-server";
+import { auth } from "./middleware/auth";
 import { schema } from "./schema";
-import { Context } from "./type/type";
+import { AuthTokenPayload, Context } from "./type/type";
 import typeormConfig from "./typeorm.config";
 
 (async () => {
@@ -8,7 +9,17 @@ import typeormConfig from "./typeorm.config";
 
   const server = new ApolloServer({
     schema,
-    context: (): Context => ({ conn }),
+    context: ({ req }): Context => {
+      const token: AuthTokenPayload | null =
+        req && req.headers?.authorization
+          ? auth(req.headers?.authorization)
+          : null;
+
+      return {
+        conn,
+        userId: token?.userId,
+      };
+    },
   });
 
   server.listen(5000).then(({ url }) => {

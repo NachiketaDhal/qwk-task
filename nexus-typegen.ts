@@ -62,6 +62,7 @@ export interface NexusGenFieldTypes {
   Mutation: { // field return type
     login: NexusGenRootTypes['AuthType']; // AuthType!
     register: NexusGenRootTypes['AuthType']; // AuthType!
+    updateUser: NexusGenRootTypes['User']; // User!
   }
   Query: { // field return type
     ok: boolean; // Boolean!
@@ -84,6 +85,7 @@ export interface NexusGenFieldTypeNames {
   Mutation: { // field return type name
     login: 'AuthType'
     register: 'AuthType'
+    updateUser: 'User'
   }
   Query: { // field return type name
     ok: 'Boolean'
@@ -110,6 +112,12 @@ export interface NexusGenArgTypes {
       firstname: string; // String!
       gender: string; // String!
       password: string; // String!
+    }
+    updateUser: { // args
+      city: string; // String!
+      email: string; // String!
+      firstname: string; // String!
+      gender: string; // String!
     }
   }
 }
