@@ -54,5 +54,35 @@ export const AuthMutation = extendType({
         };
       },
     });
+    t.nonNull.field("login", {
+      type: "AuthType",
+      args: {
+        email: nonNull(stringArg()),
+        password: nonNull(stringArg()),
+      },
+      async resolve(_parent, args, _context, _info) {
+        const { email, password } = args;
+
+        const user = await User.findOne({ where: { email } });
+
+        if (!user) {
+          throw new Error("No user found!");
+        }
+
+        const isValid = await argon2.verify(user.password, password);
+
+        if (!isValid) throw new Error("Invalid credentials!");
+
+        const token = jwt.sign(
+          { userId: user.id },
+          process.env.JWT_SECRET as jwt.Secret
+        );
+
+        return {
+          user,
+          token,
+        };
+      },
+    });
   },
 });

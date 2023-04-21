@@ -8,6 +8,7 @@ type AuthType {
 }
 
 type Mutation {
+  login(email: String!, password: String!): AuthType!
   register(city: String!, email: String!, firstname: String!, gender: String!, password: String!): AuthType!
 }
 

@@ -60,6 +60,7 @@ export interface NexusGenFieldTypes {
     user: NexusGenRootTypes['User']; // User!
   }
   Mutation: { // field return type
+    login: NexusGenRootTypes['AuthType']; // AuthType!
     register: NexusGenRootTypes['AuthType']; // AuthType!
   }
   Query: { // field return type
@@ -81,6 +82,7 @@ export interface NexusGenFieldTypeNames {
     user: 'User'
   }
   Mutation: { // field return type name
+    login: 'AuthType'
     register: 'AuthType'
   }
   Query: { // field return type name
@@ -98,6 +100,10 @@ export interface NexusGenFieldTypeNames {
 
 export interface NexusGenArgTypes {
   Mutation: {
+    login: { // args
+      email: string; // String!
+      password: string; // String!
+    }
     register: { // args
       city: string; // String!
       email: string; // String!
