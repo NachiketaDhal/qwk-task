@@ -2,7 +2,10 @@ import argon2 from "argon2";
 import jwt from "jsonwebtoken";
 import { extendType, nonNull, stringArg, objectType } from "nexus";
 import { Context } from "src/type/type";
-import { User } from "../entities/User";
+import { PrismaClient } from "@prisma/client";
+import { NexusGenRootTypes } from "../../nexus-typegen";
+
+const prisma = new PrismaClient();
 
 export const AuthType = objectType({
   name: "AuthType",
@@ -26,7 +29,12 @@ export const AuthMutation = extendType({
         city: nonNull(stringArg()),
         password: nonNull(stringArg()),
       },
-      async resolve(_parent, args, _context, _info) {
+      async resolve(
+        _parent,
+        args,
+        _context,
+        _info
+      ): Promise<NexusGenRootTypes["AuthType"]> {
         const { firstname, email, gender, city, password } = args;
 
         const hashedPassword = await argon2.hash(password);
@@ -34,13 +42,15 @@ export const AuthMutation = extendType({
         let user, token;
 
         try {
-          user = await User.create({
-            firstname,
-            email,
-            gender,
-            password: hashedPassword,
-            city,
-          }).save();
+          user = await prisma.user.create({
+            data: {
+              firstname,
+              email,
+              gender,
+              password: hashedPassword,
+              city,
+            },
+          });
           token = jwt.sign(
             { userId: user.id },
             process.env.JWT_SECRET as jwt.Secret
@@ -50,7 +60,7 @@ export const AuthMutation = extendType({
         }
 
         return {
-          token,
+          token: token || "",
           user,
         };
       },
@@ -64,7 +74,7 @@ export const AuthMutation = extendType({
       async resolve(_parent, args, _context, _info) {
         const { email, password } = args;
 
-        const user = await User.findOne({ where: { email } });
+        const user = await prisma.user.findUnique({ where: { email } });
 
         if (!user) {
           throw new Error("No user found!");
@@ -103,36 +113,20 @@ export const AuthMutation = extendType({
         if (!email && !firstname && !gender && !city)
           throw new Error("Invalid request, please check the inputs!");
 
-        /**
-         * 
-        const { conn } = context;
-        let query = "UPDATE \"user\" SET ";
+        const data = {} as NexusGenRootTypes["User"];
 
-        if (email) query += `email = '${email}'`;
-        if (firstname) query += `, firstname = '${firstname}'`;
-        if (gender) query += `, gender = '${gender}'`;
-        if (city) query += `, city = '${city}'`;
-
-        query += ` WHERE id = ${userId}`;
-
-        conn.query(query);
-         */
-
+        if (email) data.email = email;
+        if (firstname) data.firstname = firstname;
+        if (gender) data.gender = gender;
+        if (city) data.city = city;
 
         try {
-          const userToUpdate = await User.findOne({ where: { id: userId } });
-  
-          if (email && userToUpdate?.email) userToUpdate.email = email;
-          if (email && userToUpdate?.firstname) userToUpdate.firstname = firstname;
-          if (email && userToUpdate?.gender) userToUpdate.gender = gender;
-          if (email && userToUpdate?.city) userToUpdate.city = city;
-  
-          await userToUpdate?.save();
+          await prisma.user.update({ where: { id: userId }, data });
         } catch (error) {
           console.log(error);
         }
 
-        return User.findOne({ where: { id: userId } });
+        return prisma.user.findUnique({ where: { id: userId } });
       },
     });
   },
