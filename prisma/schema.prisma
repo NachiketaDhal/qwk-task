@@ -21,4 +21,5 @@ model User {
     city String @db.VarChar(255)
     gender String @db.VarChar(255)
     password String @db.VarChar(255)
+    token String? @db.VarChar(255)
 }

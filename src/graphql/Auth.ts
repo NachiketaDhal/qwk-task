@@ -4,6 +4,7 @@ import { extendType, nonNull, stringArg, objectType } from "nexus";
 import { Context } from "src/type/type";
 import { PrismaClient } from "@prisma/client";
 import { NexusGenRootTypes } from "../../nexus-typegen";
+import logger from "../logger";
 
 const prisma = new PrismaClient();
 
@@ -39,7 +40,8 @@ export const AuthMutation = extendType({
 
         const hashedPassword = await argon2.hash(password);
 
-        let user, token;
+        let user = {} as NexusGenRootTypes["User"],
+          token;
 
         try {
           user = await prisma.user.create({
@@ -73,21 +75,41 @@ export const AuthMutation = extendType({
       },
       async resolve(_parent, args, _context, _info) {
         const { email, password } = args;
+        let user = {} as NexusGenRootTypes["User"] | null,
+          token: string = "";
 
-        const user = await prisma.user.findUnique({ where: { email } });
+        try {
+          user = await prisma.user.findUnique({ where: { email } });
 
-        if (!user) {
-          throw new Error("No user found!");
+          if (!user) {
+            throw new Error("No user found!");
+          }
+
+          const isValid = await argon2.verify(user.password, password);
+
+          if (!isValid) throw new Error("Invalid credentials!");
+
+          token = jwt.sign(
+            { userId: user.id },
+            process.env.JWT_SECRET as jwt.Secret
+          );
+
+          logger.info(
+            JSON.stringify({
+              user,
+              token,
+            })
+          );
+
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { token },
+          });
+        } catch (error) {
+          console.log(error);
+          logger.error(error.message);
+          throw new Error(error);
         }
-
-        const isValid = await argon2.verify(user.password, password);
-
-        if (!isValid) throw new Error("Invalid credentials!");
-
-        const token = jwt.sign(
-          { userId: user.id },
-          process.env.JWT_SECRET as jwt.Secret
-        );
 
         return {
           user,
@@ -104,7 +126,12 @@ export const AuthMutation = extendType({
         gender: nonNull(stringArg()),
         city: nonNull(stringArg()),
       },
-      async resolve(_parent, args, context: Context, _info) {
+      async resolve(
+        _parent,
+        args,
+        context: Context,
+        _info
+      ): Promise<NexusGenRootTypes["User"]> {
         const { email, firstname, gender, city } = args;
         const { userId } = context;
 
